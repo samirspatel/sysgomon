@@ -4,6 +4,12 @@ A beautiful and efficient terminal-based system monitoring tool written in Go. S
 
 ![SysGoMon Screenshot](screenshot.png)
 
+# To install using brew
+```
+brew tap samirspatel/sysgomon https://github.com/samirspatel/sysgomon
+brew install samirspatel/sysgomon/sysgomon
+```
+
 ## Features
 
 - **CPU Monitoring**
