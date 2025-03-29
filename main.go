@@ -18,7 +18,7 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-const version = "0.1.0"
+const version = "0.1.1"
 
 // ProcessInfo represents a process with its resource usage
 type ProcessInfo struct {
