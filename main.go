@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"sort"
@@ -15,6 +16,8 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 )
+
+const version = "0.1.0"
 
 // ProcessInfo represents a process with its resource usage
 type ProcessInfo struct {
@@ -169,6 +172,14 @@ type DiskData struct {
 }
 
 func main() {
+	showVersion := flag.Bool("version", false, "Show version information")
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("SysGoMon version %s\n", version)
+		return
+	}
+
 	if err := ui.Init(); err != nil {
 		log.Fatalf("Failed to initialize termui: %v", err)
 	}

@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          
+      - name: Build
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o sysgomon-darwin-amd64
+          GOOS=darwin GOARCH=arm64 go build -o sysgomon-darwin-arm64
+          GOOS=linux GOARCH=amd64 go build -o sysgomon-linux-amd64
+          GOOS=linux GOARCH=arm64 go build -o sysgomon-linux-arm64
+          
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            sysgomon-darwin-amd64
+            sysgomon-darwin-arm64
+            sysgomon-linux-amd64
+            sysgomon-linux-arm64
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Update Homebrew Formula
+        run: |
+          # Download the current formula
+          curl -s https://raw.githubusercontent.com/Homebrew/homebrew-core/master/Formula/s/sysgomon.rb > sysgomon.rb
+          
+          # Get the new version from the tag
+          VERSION=${GITHUB_REF#refs/tags/v}
+          
+          # Update the version and SHA256
+          SHA256=$(shasum -a 256 sysgomon-darwin-arm64 | cut -d' ' -f1)
+          sed -i '' "s/version \".*\"/version \"${VERSION}\"/" sysgomon.rb
+          sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" sysgomon.rb
+          
+          # Create a new branch and commit the changes
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git checkout -b update-sysgomon-${VERSION}
+          git add sysgomon.rb
+          git commit -m "Update sysgomon to ${VERSION}"
+          git push origin update-sysgomon-${VERSION}
+          
+          # Create a pull request
+          gh pr create \
+            --title "Update sysgomon to ${VERSION}" \
+            --body "This PR updates the sysgomon formula to version ${VERSION}" \
+            --base master \
+            --head update-sysgomon-${VERSION} 
