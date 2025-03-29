@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"time"
 
@@ -177,7 +178,7 @@ func main() {
 
 	if *showVersion {
 		fmt.Printf("SysGoMon version %s\n", version)
-		return
+		os.Exit(0)
 	}
 
 	if err := ui.Init(); err != nil {
@@ -213,10 +214,10 @@ func main() {
 	netGraph := widgets.NewPlot()
 	netGraph.Title = "Network Traffic History (Mbps)"
 	netGraph.Border = true
-	netGraph.LineColors[0] = ui.ColorGreen  // RX
-	netGraph.LineColors[1] = ui.ColorBlue   // TX
+	netGraph.LineColors[0] = ui.ColorGreen // RX
+	netGraph.LineColors[1] = ui.ColorBlue  // TX
 	netGraph.AxesColor = ui.ColorWhite
-	netGraph.DrawDirection = widgets.DrawRight  // Draw from left to right
+	netGraph.DrawDirection = widgets.DrawRight // Draw from left to right
 	netGraph.SetRect(0, netStats.Block.Rectangle.Max.Y, termWidth, netStats.Block.Rectangle.Max.Y+9)
 	netGraph.TitleStyle.Fg = ui.ColorWhite
 	// Use the terminal width to determine how many data points to store
@@ -228,16 +229,16 @@ func main() {
 	netGraph.Data = make([][]float64, 2)
 	netGraph.Data[0] = make([]float64, dataPointCount) // RX data with terminal-width adjusted count
 	netGraph.Data[1] = make([]float64, dataPointCount) // TX data with terminal-width adjusted count
-	netGraph.PlotType = widgets.LineChart  // Use line chart for better visibility
-	netGraph.ShowAxes = false  // Hide the axis numbers
-	netGraph.HorizontalScale = 1.0  // Ensure it uses full width
+	netGraph.PlotType = widgets.LineChart              // Use line chart for better visibility
+	netGraph.ShowAxes = false                          // Hide the axis numbers
+	netGraph.HorizontalScale = 1.0                     // Ensure it uses full width
 	// Set plot mode to stretch to fill the entire width
 	netGraph.AxesColor = ui.ColorClear // Make axes invisible
 
 	// Network traffic history
 	netData := NetworkData{
-		RxData: make([]float64, dataPointCount),
-		TxData: make([]float64, dataPointCount),
+		RxData:   make([]float64, dataPointCount),
+		TxData:   make([]float64, dataPointCount),
 		MaxValue: 0.1, // Start with a small non-zero value
 	}
 
@@ -252,19 +253,19 @@ func main() {
 	diskGraph := widgets.NewPlot()
 	diskGraph.Title = "Disk I/O History (MB/s)"
 	diskGraph.Border = true
-	diskGraph.LineColors[0] = ui.ColorGreen  // Read
-	diskGraph.LineColors[1] = ui.ColorRed    // Write
+	diskGraph.LineColors[0] = ui.ColorGreen // Read
+	diskGraph.LineColors[1] = ui.ColorRed   // Write
 	diskGraph.AxesColor = ui.ColorWhite
-	diskGraph.DrawDirection = widgets.DrawRight  // Draw from left to right
+	diskGraph.DrawDirection = widgets.DrawRight // Draw from left to right
 	diskGraph.SetRect(0, diskStats.Block.Rectangle.Max.Y, termWidth, diskStats.Block.Rectangle.Max.Y+9)
 	diskGraph.TitleStyle.Fg = ui.ColorWhite
 	diskGraph.Data = make([][]float64, 2)
 	diskGraph.Data[0] = make([]float64, dataPointCount) // Read data
 	diskGraph.Data[1] = make([]float64, dataPointCount) // Write data
-	diskGraph.PlotType = widgets.LineChart  // Use line chart for better visibility
-	diskGraph.ShowAxes = false  // Hide the axis numbers
-	diskGraph.HorizontalScale = 1.0  // Ensure it uses full width
-	diskGraph.AxesColor = ui.ColorClear // Make axes invisible
+	diskGraph.PlotType = widgets.LineChart              // Use line chart for better visibility
+	diskGraph.ShowAxes = false                          // Hide the axis numbers
+	diskGraph.HorizontalScale = 1.0                     // Ensure it uses full width
+	diskGraph.AxesColor = ui.ColorClear                 // Make axes invisible
 
 	// Disk I/O history
 	diskData := DiskData{
@@ -327,16 +328,16 @@ func main() {
 			case "<Resize>":
 				payload := e.Payload.(ui.Resize)
 				termWidth, termHeight = payload.Width, payload.Height
-				
+
 				header.SetRect(0, 0, termWidth, 3)
-				
+
 				// Update CPU gauges position
 				cpuTitle, cpuGauges, cpuHeight = createCPUGauges(termWidth)
-				
+
 				// Update network stats and graph positions
 				netStats.SetRect(0, cpuHeight, termWidth, cpuHeight+4)
 				netGraph.SetRect(0, netStats.Block.Rectangle.Max.Y, termWidth, netStats.Block.Rectangle.Max.Y+9)
-				
+
 				// Update data point count on resize to match new width
 				dataPointCount := termWidth // Use full terminal width
 				if dataPointCount < 100 {
@@ -346,42 +347,42 @@ func main() {
 				if dataPointCount > len(netData.RxData) {
 					newRxData := make([]float64, dataPointCount)
 					newTxData := make([]float64, dataPointCount)
-					
+
 					// Copy existing data to preserve history
 					copy(newRxData[dataPointCount-len(netData.RxData):], netData.RxData)
 					copy(newTxData[dataPointCount-len(netData.TxData):], netData.TxData)
-					
+
 					netData.RxData = newRxData
 					netData.TxData = newTxData
-					
+
 					netGraph.Data[0] = netData.RxData
 					netGraph.Data[1] = netData.TxData
 				}
-				
+
 				// Update disk graph data points if needed
 				if dataPointCount > len(diskData.ReadData) {
 					newReadData := make([]float64, dataPointCount)
 					newWriteData := make([]float64, dataPointCount)
-					
+
 					// Copy existing data to preserve history
 					copy(newReadData[dataPointCount-len(diskData.ReadData):], diskData.ReadData)
 					copy(newWriteData[dataPointCount-len(diskData.WriteData):], diskData.WriteData)
-					
+
 					diskData.ReadData = newReadData
 					diskData.WriteData = newWriteData
-					
+
 					diskGraph.Data[0] = diskData.ReadData
 					diskGraph.Data[1] = diskData.WriteData
 				}
-				
+
 				diskStats.SetRect(0, netGraph.Block.Rectangle.Max.Y, termWidth, netGraph.Block.Rectangle.Max.Y+4)
 				diskGraph.SetRect(0, diskStats.Block.Rectangle.Max.Y, termWidth, diskStats.Block.Rectangle.Max.Y+9)
-				
+
 				// Update process list position
 				processList.SetRect(0, diskGraph.Block.Rectangle.Max.Y, termWidth, termHeight-1)
-				
+
 				footer.SetRect(0, termHeight-1, termWidth, termHeight)
-				
+
 				// Complete redraw is necessary on resize
 				ui.Clear()
 				ui.Render(header, cpuTitle)
@@ -394,57 +395,57 @@ func main() {
 		case <-ticker:
 			// Update CPU gauges target values
 			updateCPUTargets(cpuGauges)
-			
+
 			// Animate CPU gauges toward target values
 			animateCPUGauges(cpuGauges, animationSpeed)
-			
+
 			// Update network information
 			now := time.Now()
 			if netIOCounters, err := net.IOCounters(false); err == nil {
 				duration := now.Sub(lastNetworkUpdate).Seconds()
 				rxBytesPerSec := float64(netIOCounters[0].BytesRecv-prevNetIOStats.BytesRecv) / duration
 				txBytesPerSec := float64(netIOCounters[0].BytesSent-prevNetIOStats.BytesSent) / duration
-				
+
 				rxMbps := rxBytesPerSec * 8 / 1000000 // Convert bytes/sec to Mbps
 				txMbps := txBytesPerSec * 8 / 1000000 // Convert bytes/sec to Mbps
-				
+
 				// Update network text display
 				newText := fmt.Sprintf(
 					"[In:  ](fg:green) %8.2f Mbps  [Out: ](fg:blue) %8.2f Mbps  [Total In: ](fg:cyan) %s  [Total Out:](fg:cyan) %s",
-					rxMbps, 
+					rxMbps,
 					txMbps,
 					formatBytes(netIOCounters[0].BytesRecv),
 					formatBytes(netIOCounters[0].BytesSent),
 				)
-				
+
 				// Only update if the text changed
 				if newText != netStats.Text {
 					netStats.Text = newText
 					ui.Render(netStats)
 				}
-				
+
 				// Shift network history data and add new values
 				updateNetworkGraph(&netData, rxMbps, txMbps, netGraph)
-				
+
 				prevNetIOStats = netIOCounters[0]
 				lastNetworkUpdate = now
 			}
-			
+
 			// Update disk I/O information
 			if diskIOCounters, err := disk.IOCounters(); err == nil {
 				duration := now.Sub(lastDiskUpdate).Seconds()
 				diskText := ""
-				
+
 				// Calculate total read and write speeds across all disks
 				var totalReadMBps, totalWriteMBps float64
 				for name, stat := range diskIOCounters {
 					if prev, ok := prevDiskIOStats[name]; ok {
-						readBytesPerSec := float64(stat.ReadBytes-prev.ReadBytes) / duration / 1024 / 1024  // MB/s
+						readBytesPerSec := float64(stat.ReadBytes-prev.ReadBytes) / duration / 1024 / 1024    // MB/s
 						writeBytesPerSec := float64(stat.WriteBytes-prev.WriteBytes) / duration / 1024 / 1024 // MB/s
-						
+
 						totalReadMBps += readBytesPerSec
 						totalWriteMBps += writeBytesPerSec
-						
+
 						if len(diskText) > 0 {
 							diskText += "\n"
 						}
@@ -455,19 +456,19 @@ func main() {
 					}
 					prevDiskIOStats[name] = stat
 				}
-				
+
 				// Only update if the text changed
 				if diskText != diskStats.Text {
 					diskStats.Text = diskText
 					ui.Render(diskStats)
 				}
-				
+
 				// Update disk I/O graph
 				updateDiskGraph(&diskData, totalReadMBps, totalWriteMBps, diskGraph)
-				
+
 				lastDiskUpdate = now
 			}
-			
+
 			// Update process list
 			processList.update()
 			ui.Render(processList)
@@ -488,65 +489,65 @@ func createCPUGauges(width int) (*widgets.Paragraph, []CPUGauge, int) {
 	cpuTitle.Text = fmt.Sprintf("[CPU Utilization (%d cores)](fg:white,mod:bold)", cpuCount)
 	cpuTitle.Border = false
 	cpuTitle.SetRect(0, 3, width, 4) // Start at y=3 (after header)
-	
+
 	// Create individual gauges for each CPU core
 	gauges := make([]CPUGauge, cpuCount+1) // +1 for the average
-	
+
 	// First gauge is for average CPU
 	gauges[0] = CPUGauge{
-		Gauge: widgets.NewGauge(),
+		Gauge:          widgets.NewGauge(),
 		CurrentPercent: 0,
-		TargetPercent: 0,
+		TargetPercent:  0,
 	}
 	gauges[0].Gauge.Title = "Avg CPU"
 	gauges[0].Gauge.SetRect(0, 4, width, 7) // Start at y=4
 	gauges[0].Gauge.BarColor = ui.ColorGreen
 	gauges[0].Gauge.BorderStyle.Fg = ui.ColorBlue
 	gauges[0].Gauge.TitleStyle.Fg = ui.ColorCyan
-	
+
 	// Calculate the width for each column
 	columnWidth := width / 2
-	
+
 	// Create a gauge for each CPU core
 	for i := 0; i < cpuCount; i++ {
 		gauges[i+1] = CPUGauge{
-			Gauge: widgets.NewGauge(),
+			Gauge:          widgets.NewGauge(),
 			CurrentPercent: 0,
-			TargetPercent: 0,
+			TargetPercent:  0,
 		}
 		gauges[i+1].Gauge.Title = fmt.Sprintf("CPU %d", i+1)
-		
+
 		// Determine which column this CPU belongs to
 		isLeftColumn := i < cpuCount/2
-		
+
 		// Calculate x position based on column
 		xStart := 0
 		if !isLeftColumn {
 			xStart = columnWidth
 		}
-		
+
 		// Calculate y position based on position within column
 		yOffset := i
 		if !isLeftColumn {
 			yOffset = i - cpuCount/2
 		}
-		
+
 		// Ensure the right column gauges extend to the full width
 		xEnd := xStart + columnWidth
 		if !isLeftColumn {
 			xEnd = width // Make right column extend to full width
 		}
-		
+
 		gauges[i+1].Gauge.SetRect(xStart, 7+yOffset*3, xEnd, 10+yOffset*3)
 		gauges[i+1].Gauge.BarColor = ui.ColorGreen
 		gauges[i+1].Gauge.BorderStyle.Fg = ui.ColorBlue
 		gauges[i+1].Gauge.TitleStyle.Fg = ui.ColorCyan
 	}
-	
+
 	// Calculate total height based on the number of rows needed
 	rowsPerColumn := (cpuCount + 1) / 2 // Round up for odd number of cores
-	totalHeight := 7 + rowsPerColumn*3 // Start from y=7
-	
+	totalHeight := 7 + rowsPerColumn*3  // Start from y=7
+
 	return cpuTitle, gauges, totalHeight
 }
 
@@ -564,10 +565,10 @@ func updateCPUTargets(gauges []CPUGauge) {
 		totalPercent += percent
 	}
 	avgPercent := totalPercent / float64(len(percentages))
-	
+
 	// Update average gauge target
 	gauges[0].TargetPercent = avgPercent
-	
+
 	// Update individual CPU gauge targets
 	for i, percent := range percentages {
 		if i+1 < len(gauges) {
@@ -581,7 +582,7 @@ func animateCPUGauges(gauges []CPUGauge, speed float64) {
 	for i := range gauges {
 		// Calculate the next step in animation
 		diff := gauges[i].TargetPercent - gauges[i].CurrentPercent
-		
+
 		// If difference is very small, just snap to the target
 		if abs(diff) < 0.5 {
 			gauges[i].CurrentPercent = gauges[i].TargetPercent
@@ -589,11 +590,11 @@ func animateCPUGauges(gauges []CPUGauge, speed float64) {
 			// Otherwise, move a percentage of the way to the target
 			gauges[i].CurrentPercent += diff * speed
 		}
-		
+
 		// Update gauge percent
 		intPercent := int(gauges[i].CurrentPercent)
 		gauges[i].Gauge.Percent = intPercent
-		
+
 		// Update color based on usage
 		if intPercent >= 80 {
 			gauges[i].Gauge.BarColor = ui.ColorRed
@@ -602,7 +603,7 @@ func animateCPUGauges(gauges []CPUGauge, speed float64) {
 		} else {
 			gauges[i].Gauge.BarColor = ui.ColorGreen
 		}
-		
+
 		// Render just this gauge
 		ui.Render(gauges[i].Gauge)
 	}
@@ -706,12 +707,12 @@ func updateDiskGraphDisplay(diskData *DiskData, readMBps, writeMBps float64, gra
 	ui.Render(graph)
 }
 
-// Helper functions 
+// Helper functions
 func maxInSlice(values []float64) float64 {
 	if len(values) == 0 {
 		return 0
 	}
-	
+
 	max := values[0]
 	for _, v := range values {
 		if v > max {
@@ -742,12 +743,12 @@ func updateHeader(p *widgets.Paragraph) {
 		p.Text = "Error getting system information"
 		return
 	}
-	
+
 	memInfo, err := mem.VirtualMemory()
 	if err != nil {
 		log.Printf("Error getting memory info: %v", err)
 	}
-	
+
 	cpuCount, err := cpu.Counts(true)
 	if err != nil {
 		log.Printf("Error getting CPU count: %v", err)
@@ -758,7 +759,7 @@ func updateHeader(p *widgets.Paragraph) {
 	if err != nil {
 		log.Printf("Error getting disk info: %v", err)
 	}
-	
+
 	p.Text = fmt.Sprintf(
 		"[Host: %s](fg:cyan) | [OS: %s %s](fg:yellow) | [%d cores](fg:green) | [RAM: %s / %s (%.1f%%)](fg:magenta) | [Disk: %s free / %s total (%.1f%% free)](fg:red)",
 		hostInfo.Hostname,
@@ -785,4 +786,4 @@ func formatBytes(bytes uint64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
-} 
+}
